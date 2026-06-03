@@ -1,0 +1,11 @@
+[Unit]
+Description=Aether Daily Wallpaper
+After=graphical-session.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/aether-daily-wallpaper
+ExecStartPost=/usr/bin/bash -c 'pkill -x swaybg || true; sleep 0.3; systemd-run --user --scope --slice=app-graphical.slice --collect -- /usr/bin/swaybg -i %h/.config/omarchy/current/background -m fill'
+Environment=WAYLAND_DISPLAY=wayland-1
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus

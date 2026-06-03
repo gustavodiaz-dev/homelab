@@ -1,0 +1,12 @@
+[Unit]
+Description=Weekly user-level maintenance (AUR, Omarchy, mise, npm, nvim plugins)
+After=network-online.target
+Wants=network-online.target
+OnFailure=notify-maintenance-failure.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=%h/.config/gus-monitor.env
+ExecStart=/home/gus/bin/user-maintenance.sh
+StandardOutput=journal
+StandardError=journal

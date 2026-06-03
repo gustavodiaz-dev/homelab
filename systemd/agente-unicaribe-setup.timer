@@ -1,0 +1,16 @@
+[Unit]
+Description=Agente Unicaribe — setup días 1, 8 y 15 (apertura de unidades)
+Requires=agente-unicaribe-setup.service
+
+[Timer]
+# Día 1: apertura Unidades 1 y 2
+OnCalendar=*-*-01 08:00:00
+# Día 8: apertura Unidad 3 (y actividades docente si aplica)
+OnCalendar=*-*-08 08:00:00
+# Día 15: apertura Unidades 4, 5 y Trabajo Final
+OnCalendar=*-*-15 08:00:00
+RandomizedDelaySec=1800
+Persistent=true
+
+[Install]
+WantedBy=timers.target

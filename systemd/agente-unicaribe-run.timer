@@ -1,0 +1,12 @@
+[Unit]
+Description=Agente Unicaribe — timer diario (hora aleatoria entre 7pm y 11pm)
+Requires=agente-unicaribe-run.service
+
+[Timer]
+# Corre entre 19:00 y 23:00 con variación aleatoria de hasta 4h
+OnCalendar=*-*-* 19:00:00
+RandomizedDelaySec=14400
+Persistent=true
+
+[Install]
+WantedBy=timers.target

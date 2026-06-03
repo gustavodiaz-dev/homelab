@@ -1,0 +1,11 @@
+[Unit]
+Description=Agente Unicaribe — setup mensual (scrape + plan)
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/gus/Projects/agente-unicaribe
+ExecStart=/home/gus/Projects/agente-unicaribe/.venv/bin/python3 main.py setup
+EnvironmentFile=/home/gus/Projects/agente-unicaribe/.env
+StandardOutput=append:/home/gus/Projects/agente-unicaribe/logs/setup.log
+StandardError=append:/home/gus/Projects/agente-unicaribe/logs/setup.log
