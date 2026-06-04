@@ -92,12 +92,12 @@ homelab/
 
 | Phase | Status | What |
 |-------|--------|------|
-| 0 — Hardening | ✅ Done | PBS backup, firewall, kernel cleanup |
-| 1 — Repurposing ZimaOS | ✅ Done | Migrated to LXC + Docker on CT 103 |
-| 2 — Service stack | ✅ Done | Dashboard, monitoring, proxy, password manager |
-| 3 — k3s | 🔄 Next | Kubernetes node on CT 106 (CKA prep) |
-| 4 — Terraform + Ansible | ⏳ Pending | IaC over existing stack |
-| 5 — Observability | ⏳ Pending | Prometheus + Grafana + Loki |
+| 0 — Hardening | Done | PBS backup, firewall, kernel cleanup |
+| 1 — Repurposing ZimaOS | Done | Migrated to LXC + Docker on CT 103 |
+| 2 — Service stack | Done | Dashboard, monitoring, proxy, password manager |
+| 3 — k3s | Next | Kubernetes node on CT 106 (CKA prep) |
+| 4 — Terraform + Ansible | Pending | IaC over existing stack |
+| 5 — Observability | Pending | Prometheus + Grafana + Loki |
 
 ## Security notes
 
