@@ -1,0 +1,83 @@
+- Proxmox:
+    - ProxMenux Monitor:
+        icon: https://cdn.jsdelivr.net/gh/selfhst/icons/png/proxmenux.png
+        href: http://monitor.lab
+        description: Proxmox host health
+        ping: 192.168.18.15
+        widget:
+          type: customapi
+          url: http://192.168.18.15:8008/api/system
+          headers:
+            Authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFkbWluIiwiZXhwIjoxODEyMDc3ODYxLCJpYXQiOjE3ODA1NDE4NjEsImlzcyI6InByb3htZW51eC1tb25pdG9yIiwiYXVkIjoiYXBpIn0.14ZYqAMqu7N4cuvYkbpit8oz78vjRNWJLWGP6r9hvqw"
+          refreshInterval: 10000
+          mappings:
+            - field: uptime
+              label: Uptime
+              icon: lucide:clock-4
+              format: text
+            - field: cpu_usage
+              label: CPU
+              icon: lucide:cpu
+              format: percent
+            - field: memory_usage
+              label: RAM
+              icon: lucide:memory-stick
+              format: percent
+            - field: temperature
+              label: Temp
+              icon: lucide:thermometer-sun
+              format: number
+              suffix: °C
+
+- Automatización:
+    - n8n:
+        icon: n8n.svg
+        href: http://gdn8n.duckdns.org
+        description: Workflow automation
+        server: my-server
+        container: n8n
+
+- Seguridad:
+    - Vaultwarden:
+        icon: vaultwarden.svg
+        href: https://labpass.duckdns.org
+        description: Password manager
+        server: my-server
+        container: vaultwarden
+
+- Infraestructura:
+    - Proxmox:
+        icon: proxmox.svg
+        href: https://192.168.18.15:8006
+        description: Hypervisor — Macbook
+        ping: 192.168.18.15
+    - Nginx Proxy Manager:
+        icon: nginx-proxy-manager.svg
+        href: http://npm.lab
+        description: Reverse proxy + SSL
+        server: my-server
+        container: nginx-proxy-manager
+    - AdGuard Home:
+        icon: adguard-home.svg
+        href: http://adguard.lab
+        description: DNS + ad blocking
+        ping: 192.168.18.17
+    - Tailscale:
+        icon: tailscale.svg
+        href: https://login.tailscale.com
+        description: VPN — cachyos-x8664
+        ping: 192.168.18.20
+
+- Monitoreo:
+    - Uptime Kuma:
+        icon: uptime-kuma.svg
+        href: http://uptime.lab
+        description: Service monitoring
+        server: my-server
+        container: uptime-kuma
+    - Portainer:
+        icon: portainer.svg
+        href: http://portainer.lab
+        description: Docker management
+        server: my-server
+        container: portainer
