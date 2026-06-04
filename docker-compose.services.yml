@@ -1,0 +1,239 @@
+# =============================================================================
+# Homelab Services Stack — LXC 103 (services)
+# IP: 192.168.18.29
+# Servicios: Vaultwarden + Nginx Proxy Manager + n8n + PostgreSQL
+# Acceso: SOLO LAN (192.168.18.0/24 + Tailscale). NO exponer al WAN sin hardening.
+# =============================================================================
+# NOTA: imágenes con :latest para migración 1:1 desde VM 102.
+# Después de validar, capturar digests y pinear en un commit separado:
+#   docker compose pull
+#   docker images --digests | grep -E 'vaultwarden|nginx-proxy-manager|n8n|postgres'
+# =============================================================================
+
+networks:
+  services-net:
+    driver: bridge
+    name: services-net
+
+volumes:
+  postgres-data:
+    name: services_postgres-data
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # 1. PUERTA DE ENTRADA — Nginx Proxy Manager
+  # ---------------------------------------------------------------------------
+  npm:
+    image: jc21/nginx-proxy-manager:latest
+    container_name: nginx-proxy-manager
+    restart: unless-stopped
+    networks:
+      - services-net
+    ports:
+      - '80:80'      # HTTP público (lo usa Let's Encrypt para validaciones)
+      - '443:443'    # HTTPS público
+      - '192.168.18.29:81:81'   # Admin UI: LAN-only via bind a IP del LXC (Tailscale ACL como defensa adicional)
+    environment:
+      - DISABLE_IPV6=true
+      - TZ=${TZ}
+    volumes:
+      - ./data/npm/data:/data
+      - ./data/npm/letsencrypt:/etc/letsencrypt
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ---------------------------------------------------------------------------
+  # 2. GESTOR DE CONTRASEÑAS — Vaultwarden  (HARDENED, task #10)
+  # ---------------------------------------------------------------------------
+  # Acceso público: https://labpass.duckdns.org (via NPM -> vaultwarden:80)
+  vaultwarden:
+    image: vaultwarden/server:latest
+    container_name: vaultwarden
+    restart: unless-stopped
+    networks:
+      - services-net
+    ports:
+      - '127.0.0.1:8080:80'
+    environment:
+      - TZ=${TZ}
+      - DOMAIN=${VAULTWARDEN_DOMAIN}
+      - ADMIN_TOKEN=${VAULTWARDEN_ADMIN_TOKEN}
+      - IP_HEADER=X-Forwarded-For
+      - SIGNUPS_ALLOWED=false
+      - INVITATIONS_ALLOWED=false
+      - SHOW_PASSWORD_HINT=false
+      - LOGIN_RATELIMIT_SECONDS=60
+      - LOGIN_RATELIMIT_MAX_BURST=10
+      - ADMIN_RATELIMIT_SECONDS=300
+      - ADMIN_RATELIMIT_MAX_BURST=3
+      - LOG_LEVEL=warn
+    volumes:
+      - ./data/vaultwarden/data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:80/alive"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ---------------------------------------------------------------------------
+  # 3. BASE DE DATOS para n8n — PostgreSQL
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: n8n-postgres
+    restart: unless-stopped
+    networks:
+      - services-net
+    # NO exponemos puerto al host. Solo accesible dentro de la red Docker.
+    environment:
+      - POSTGRES_USER=${N8N_DB_USER}
+      - POSTGRES_PASSWORD=${N8N_DB_PASSWORD}
+      - POSTGRES_DB=${N8N_DB_NAME}
+      - TZ=${TZ}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${N8N_DB_USER} -d ${N8N_DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ---------------------------------------------------------------------------
+  # 4. AUTOMATIZACIÓN — n8n
+  # ---------------------------------------------------------------------------
+  # Auth: sistema de usuarios interno de n8n 1.x (NO BASIC_AUTH legacy).
+  # En el primer arranque, navegar a http://192.168.18.29:5678 y crear owner.
+  n8n:
+    image: n8n-custom:latest
+    container_name: n8n
+    restart: unless-stopped
+    networks:
+      - services-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      # Bind SOLO a la IP LAN del LXC. NO 0.0.0.0 → previene exposición accidental.
+      - '192.168.18.29:5678:5678'
+    environment:
+      # --- DB ---
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=${N8N_DB_NAME}
+      - DB_POSTGRESDB_USER=${N8N_DB_USER}
+      - DB_POSTGRESDB_PASSWORD=${N8N_DB_PASSWORD}
+      # --- Red / URLs ---
+      - N8N_HOST=tailscale.tail7636ea.ts.net
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=https
+      - WEBHOOK_URL=https://tailscale.tail7636ea.ts.net/
+      # --- Seguridad ---
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+      - N8N_USER_MANAGEMENT_JWT_SECRET=${N8N_JWT_SECRET}
+      - N8N_SECURE_COOKIE=true  # http only, LAN — si pasas a https vía NPM, true
+      - N8N_PROXY_HOPS=1
+      - BANCO_POPULAR_PASSWORD=${BANCO_POPULAR_PASSWORD}
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=true
+      # --- Timezone ---
+      - GENERIC_TIMEZONE=${TZ}
+      - TZ=${TZ}
+      # --- Runtime ---
+      - EXECUTIONS_MODE=regular
+      - N8N_RUNNERS_ENABLED=true
+      - N8N_METRICS=false
+      - N8N_DIAGNOSTICS_ENABLED=false  # opt-out de telemetría
+      - N8N_VERSION_NOTIFICATIONS_ENABLED=true
+    volumes:
+      - ./data/n8n:/home/node/.n8n
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:5678/healthz || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ---------------------------------------------------------------------------
+  # 5. MONITOREO — Uptime Kuma
+  # ---------------------------------------------------------------------------
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: uptime-kuma
+    restart: unless-stopped
+    networks:
+      - services-net
+    ports:
+      - '192.168.18.29:3001:3001'
+    environment:
+      - TZ=${TZ}
+    volumes:
+      - ./data/uptime-kuma:/app/data
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ---------------------------------------------------------------------------
+  # 6. DASHBOARD — Homepage
+  # ---------------------------------------------------------------------------
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    restart: unless-stopped
+    networks:
+      - services-net
+    ports:
+      - '192.168.18.29:3000:3000'
+    environment:
+      - TZ=${TZ}
+    volumes:
+      - ./data/homepage/config:/app/config
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ---------------------------------------------------------------------------
+  # 7. GESTIÓN DOCKER — Portainer CE
+  # ---------------------------------------------------------------------------
+  # Monta el socket Docker para gestión visual. Solo accesible desde LAN.
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    restart: unless-stopped
+    networks:
+      - services-net
+    ports:
+      - '192.168.18.29:9000:9000'
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./data/portainer:/data
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
