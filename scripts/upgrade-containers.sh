@@ -3,7 +3,7 @@ set -euo pipefail
 
 source /etc/homelab.env
 
-CONTAINERS=(100 101 103)
+CONTAINERS=(100 101 103 104)
 FECHA=$(date '+%Y-%m-%d')
 RESUMEN=""
 ERRORES=""
