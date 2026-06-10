@@ -1,0 +1,11 @@
+[Unit]
+Description=Weekly apt upgrade for all LXC containers
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/homelab.env
+ExecStart=/usr/local/bin/upgrade-containers.sh
+StandardOutput=journal
+StandardError=journal

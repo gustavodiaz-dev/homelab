@@ -1,5 +1,5 @@
 [Unit]
-Description=Weekly apt upgrade timer for CT103
+Description=Weekly apt upgrade timer for LXC containers
 
 [Timer]
 OnCalendar=Sun *-*-* 03:00:00
