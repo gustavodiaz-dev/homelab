@@ -8,7 +8,7 @@ Self-hosted infrastructure running on Proxmox VE — automated, monitored, and a
 CachyOS Desktop (Tailscale: 100.108.109.78)
 └── Tailscale VPN ──────────────────────────────────────────────────────┐
                                                                         │
-Proxmox VE — MacBook i5 / 16 GB RAM / 100 GB NVMe (192.168.18.15)     │
+Proxmox VE 9.2.0 — MacBook i5 / 16 GB RAM / 100 GB NVMe (192.168.18.15)     │
 ├── ProxMenux Monitor :8008  (host health — CPU, RAM, SMART, updates)  │
 ├── CT 100: AdGuard :80/:53  (DNS + ad blocking, *.lab wildcard)       │
 ├── CT 101: Tailscale        (subnet router → 192.168.18.0/24)         │

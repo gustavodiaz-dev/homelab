@@ -16,3 +16,6 @@ id_*
 __pycache__/
 *.pyc
 .DS_Store
+
+# Tools
+.firecrawl/
