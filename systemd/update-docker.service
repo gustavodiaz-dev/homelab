@@ -1,0 +1,11 @@
+[Unit]
+Description=Weekly Docker image update for CT103 services
+After=network-online.target upgrade-containers.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/homelab.env
+ExecStart=/usr/local/bin/update-docker.sh
+StandardOutput=journal
+StandardError=journal
