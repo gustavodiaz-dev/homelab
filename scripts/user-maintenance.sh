@@ -10,6 +10,16 @@ ESTADO="Completado"
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
 
+telegram() {
+  local msg="$1"
+  [[ -z "${TELEGRAM_TOKEN:-}" || -z "${TELEGRAM_CHAT_ID:-}" ]] && return 0
+  curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
+    -d "chat_id=${TELEGRAM_CHAT_ID}&text=${msg}&parse_mode=HTML" \
+    --max-time 10 > /dev/null || true
+}
+
+trap 'telegram "🔴 <b>Mantenimiento Desktop falló</b>%0AError inesperado en línea $LINENO — revisar: journalctl --user -u mise-upgrade.service -n 50"' ERR
+
 log "=== Mantenimiento de usuario iniciado ==="
 
 log "--- AUR + Omarchy ---"
@@ -47,12 +57,21 @@ fi
 log "=== Mantenimiento completado ==="
 
 log "--- Enviando log a Notion via n8n ---"
-PAYLOAD=$(printf '{"nombre":"Mantenimiento Desktop - %s","tipo":"Desktop","estado":"%s","paquetes_actualizados":0,"instalaciones_nuevas":"%s","herramientas_actualizadas":"%s","notas":"%s"}' \
-  "$FECHA" "$ESTADO" "$INSTALACIONES_NUEVAS" "$HERRAMIENTAS_ACTUALIZADAS" "$NOTAS")
+PAYLOAD=$(jq -n \
+  --arg nombre "Mantenimiento Desktop - $FECHA" \
+  --arg estado "$ESTADO" \
+  --arg instalaciones "$INSTALACIONES_NUEVAS" \
+  --arg herramientas "$HERRAMIENTAS_ACTUALIZADAS" \
+  --arg notas "$NOTAS" \
+  '{nombre: $nombre, tipo: "Desktop", estado: $estado, paquetes_actualizados: 0, instalaciones_nuevas: $instalaciones, herramientas_actualizadas: $herramientas, notas: $notas}')
 
 curl -s -X POST "$N8N_WEBHOOK" \
   -H "Content-Type: application/json" \
   -d "$PAYLOAD" \
   --max-time 10 || log "Advertencia: no se pudo enviar log a Notion (n8n no accesible)"
+
+if [ "$ESTADO" != "Completado" ]; then
+  telegram "⚠️ <b>Mantenimiento Desktop — $ESTADO</b>%0AFecha: $FECHA%0ANotas: $NOTAS%0ARevisar: journalctl --user -u mise-upgrade.service -n 30"
+fi
 
 log "=== Listo ==="
