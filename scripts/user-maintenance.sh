@@ -12,8 +12,8 @@ log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
 
 telegram() {
   local msg="$1"
-  [[ -z "${TELEGRAM_TOKEN:-}" || -z "${TELEGRAM_CHAT_ID:-}" ]] && return 0
-  curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
+  [[ -z "${TELEGRAM_BOT_TOKEN:-}" || -z "${TELEGRAM_CHAT_ID:-}" ]] && return 0
+  curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
     -d "chat_id=${TELEGRAM_CHAT_ID}&text=${msg}&parse_mode=HTML" \
     --max-time 10 > /dev/null || true
 }
