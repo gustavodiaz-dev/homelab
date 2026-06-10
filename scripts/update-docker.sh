@@ -48,6 +48,10 @@ log "=== update-docker iniciado ==="
 
 update_stack /opt/docker/services || { ERRORES="$ERRORES services"; log "ERROR en services"; }
 
+log "--- Limpiando imágenes huérfanas ---"
+FREED=$(pct exec "$CT" -- docker image prune -f --format '{{.SpaceReclaimed}}' 2>/dev/null || true)
+[ -n "$FREED" ] && log "Espacio liberado: $FREED"
+
 log "=== Listo ==="
 
 if [ -n "$ERRORES" ]; then
